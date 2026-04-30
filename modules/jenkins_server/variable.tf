@@ -1,6 +1,6 @@
 variable "project_id" {
     type        = string
-    description = "The ID of the machine image (AMI) to use."
+    description = "The name of the project.."
 }
 
 variable "vpc_id" {

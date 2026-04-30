@@ -57,7 +57,7 @@ resource "aws_eip_association" "nat" {
 # -----------------
 # Private Route Table
 # -----------------
-resource "aws_route_table" "private" {
+resource "aws_route_table" "private_rt" {
   vpc_id = var.vpc_id
 
   tags = merge(var.tags, {
@@ -66,13 +66,17 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route" "private_nat" {
-  route_table_id          = aws_route_table.private.id
+  route_table_id          = aws_route_table.private_rt.id
   destination_cidr_block  = "0.0.0.0/0"
   network_interface_id    = aws_instance.nat.primary_network_interface_id
 }
 
-resource "aws_route_table_association" "private" {
-  for_each = toset(var.private_subnets)
+resource "aws_route_table_association" "private_assoc" {
+  for_each = {
+    for idx, subnet in var.private_subnets :
+    idx => subnet
+  }
+
   subnet_id      = each.value
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private_rt.id
 }

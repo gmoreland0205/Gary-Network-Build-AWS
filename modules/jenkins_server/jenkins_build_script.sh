@@ -1,23 +1,31 @@
 #!/bin/bash
 # Update system packages
-sudo apt-get update -y
+yum update -y
+
+# Install dependencies
+yum install -y yum-utils unzip wget git
 
 # Install Java (required for Jenkins)
-sudo apt-get install -y openjdk-21-jre
+amazon-linux-extras install java-openjdk11 -y
 
-# Add Jenkins GPG key (LTS release)
-sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
-  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+# -------------------------
+# Install Jenkins
+# -------------------------
+wget -O /etc/yum.repos.d/jenkins.repo \
+ https://pkg.jenkins.io/redhat-stable/jenkins.repo
 
-# Add Jenkins repository
-echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+yum install jenkins -y
 
-# Update package list and install Jenkins
-sudo apt-get update -y
-sudo apt-get install -y jenkins
+systemctl enable jenkins
+systemctl start jenkins
 
-# Enable and start Jenkins
-sudo systemctl enable jenkins
-sudo systemctl start jenkins
+# -------------------------
+# Install Terraform
+# -------------------------
+yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+yum install -y terraform
+
+# Verify install
+terraform -version

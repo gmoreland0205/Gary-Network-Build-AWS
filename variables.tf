@@ -1,12 +1,12 @@
-variable "project_id" {
+variable "project_name" {
     type        = string
-    default     = "gary-site"
+    default     = "Gary-Infra"
     description = "The ID of the machine image (AMI) to use."
 }
 
 variable "region" {
     type        = string
-    default     = "us-east-2"
+    default     = "us-east-1"
     description = "region to deploy portfolio web site"
 }
 
@@ -28,10 +28,13 @@ variable"instance_type" {
    description  = "Generic server instance type"
 }
 
-variable"certificate" {
-   type         = string
-   description  = "SSH Certificate"
-}
+# -- Needed for network firewall
+# -- Removed from architecture because network firewall it costs money. 
+# -- Will explore later with Suricata.
+# variable"certificate" {
+#    type         = string
+#    description  = "SSH Certificate"
+# }
 
 variable"ssh-key-pair" {
    type         = string
