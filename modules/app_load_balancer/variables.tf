@@ -1,6 +1,6 @@
-variable "project_id" {
+variable "project_name" {
     type        = string
-    description = "The ID of the project being used."
+    description = "The name of the project being used."
 }
 
 variable "vpc_id" {
@@ -13,11 +13,12 @@ variable "tags" {
     description = "Tags to be attached to the resources"
 }
 
-variable "public_subnets" {
+variable "public_subnet" {
     type        = list(string)
-    description = "Subnet IDs for the public vpn"
+    description = "Subnet ID for the public subnet"
 }
-variable "no_azs" {
-    type        = number
-    description = "Number of Availabilty Zones to create"
+
+variable "origin_secret_value" {
+    type      = string
+    sensitive = true
 }

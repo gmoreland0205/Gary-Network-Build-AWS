@@ -21,7 +21,9 @@ resource "aws_security_group" "bastion_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "bastion-sg-${var.project_name}"
+  })
 }
 
 # # Private EC2 security group (only allow SSH from bastion SG)
@@ -57,6 +59,6 @@ resource "aws_instance" "bastion" {
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
 
   tags = merge(var.tags, {
-    Name = "bastion_host_${var.project_id}"
+    Name = "bastion-host-${var.project_name}"
   })
 }

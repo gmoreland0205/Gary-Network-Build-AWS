@@ -30,7 +30,9 @@ resource "aws_security_group" "jenkins_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "jenkins-sg-${var.project_name}"
+  })
 }
 
 # Jenkins Artifacts
@@ -38,7 +40,7 @@ resource "aws_s3_bucket" "jenkins_artifacts" {
   bucket = var.bucket_name
 
   tags = merge(var.tags, {
-    Name = "jenkins_artfacts_bucket_${var.project_id}"
+    Name = "jenkins-af-buc-${var.project_name}"
   })
 }
 
@@ -63,6 +65,6 @@ resource "aws_instance" "jenkins" {
   key_name                = "${var.ssh-key-pair}"
 
   tags = merge(var.tags, {
-    Name = "jenkins_server_${var.project_id}"
+    Name = "jenkins-server-${var.project_name}"
   })
 }

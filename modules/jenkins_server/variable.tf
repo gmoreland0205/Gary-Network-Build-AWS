@@ -1,4 +1,4 @@
-variable "project_id" {
+variable "project_name" {
     type        = string
     description = "The name of the project.."
 }
@@ -35,7 +35,7 @@ variable "private_subnet_id" {
 
 variable "bucket_name" {
    type         = string
-   default      = "Jenkins_server_artifact_bucket"
+   default      = "jenkins-srv-artifact-buck"
    description  = "Jenkins Builds Artifact bucket"
 }
 

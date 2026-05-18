@@ -1,6 +1,6 @@
-variable "project_id" {
+variable "project_name" {
     type        = string
-    description = "The ID of the project being used."
+    description = "The name of the project being used."
 }
 
 variable "vpc_id" {

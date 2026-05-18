@@ -2,8 +2,13 @@ provider "aws" {
   region = var.region
 }
 
+# Get the current AWS account ID
 data "aws_caller_identity" "current" {}
+
+# Get the availability zones for the region
 data "aws_availability_zones" "available" {}
+
+# Get an AMI for an EC2 in the region that is avaible to meet the filtered criteria spec
 data "aws_ami" "generic_server" {
   most_recent = true
   owners      = ["amazon"]
@@ -22,7 +27,7 @@ locals {
   azs        = slice(data.aws_availability_zones.available.names, 0, var.no_azs)
 
   tags = {
-    Project_ID = var.project_name
+    Project_Name = var.project_name
   }
 }
 
@@ -30,20 +35,46 @@ locals {
 # Create the VPC
 ################################################################################
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
+resource "aws_vpc" "main_vpc" {
 
-  name = "vpc_${var.project_name}"
-  cidr = var.vpc_cidr
+  cidr_block = var.vpc_cidr
 
-  azs             = local.azs
-  public_subnets  = [for k, v in local.azs : cidrsubnet(var.vpc_cidr, 8, k)]
-  private_subnets = [for k, v in local.azs : cidrsubnet(var.vpc_cidr, 8, k + 10)]
+  tags = merge(local.tags, {
+    Name = "vpc-${var.project_name}"
+  })  
+}
 
-  enable_nat_gateway = false
-  single_nat_gateway = true
+################################################################################
+# Create the Subnets
+################################################################################
 
-  tags = local.tags
+# One per AZ Public Subnet
+resource "aws_subnet" "public_subnet" {
+  count = length(local.azs)
+
+  vpc_id                  = aws_vpc.main_vpc.id
+  availability_zone       = local.azs[count.index]
+
+  cidr_block              = cidrsubnet(aws_vpc.main_vpc.cidr_block, 8, count.index + 1)
+  map_public_ip_on_launch = true
+
+  tags = merge(local.tags, {
+    Name = "subnet_public-${count.index}-${var.project_name}"
+  })  
+}
+
+# One per AZ Private Subnets
+resource "aws_subnet" "private_subnets" {
+  count = length(local.azs)
+
+  vpc_id            = aws_vpc.main_vpc.id
+  availability_zone = local.azs[count.index]
+
+  cidr_block = cidrsubnet(aws_vpc.main_vpc.cidr_block, 8, count.index + 101)
+
+  tags = merge(local.tags, {
+    Name = "subnet-private-${count.index}-${var.project_name}"
+  })
 }
 
 ################################################################################
@@ -51,32 +82,38 @@ module "vpc" {
 ################################################################################
 
 resource "aws_internet_gateway" "gw" {
-  vpc_id  = module.vpc.vpc_id
+  vpc_id  = aws_vpc.main_vpc.id
 
-  tags    = local.tags
+  tags = merge(local.tags, {
+    Name = "internet-gateway-${var.project_name}"
+  })
 }
 
-# --------------------------
-# Route Table for Public Subnet
-# --------------------------
+################################################################################
+# Create the Routing Tables
+################################################################################
+
+# Public Route Table
 resource "aws_route_table" "public_rt" {
-  vpc_id = module.vpc.vpc_id
+  vpc_id = aws_vpc.main_vpc.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
-  }
-
-  tags  = local.tags
+  tags = merge(local.tags, {
+    Name = "vpc-${var.project_name}-public-rt"
+  })
 }
 
-resource "aws_route_table_association" "public_assoc" {
-  for_each = {
-    for idx, subnet in module.vpc.public_subnets :
-    idx => subnet
-  }
+# Route to Internet using Internet Gateway
+resource "aws_route" "internet_access" {
+  route_table_id         = aws_route_table.public_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.gw.id
+}
 
-  subnet_id      = each.value
+# Associate public subnet with public route table
+resource "aws_route_table_association" "public" {
+  count          = length(aws_subnet.public_subnet)
+
+  subnet_id      = aws_subnet.public_subnet[count.index].id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -89,9 +126,9 @@ resource "aws_route_table_association" "public_assoc" {
 # module "network_firewall" {
 #   source          = "./modules/network_firewall"
 #   region          = var.region
-#   vpc_id          = module.vpc.vpc_id
-#   public_subnets  = module.vpc.public_subnets
-#   project_id      = var.project_id
+#   vpc_id          = aws_vpc.main_vpc.id
+#   public_subnet  = module.vpc.public_subnet
+#   project_name    = var.project_name
 #   no_azs          = var.no_azs
 #   tags            = local.tags
 #   account_id      = local.account_id
@@ -101,22 +138,23 @@ resource "aws_route_table_association" "public_assoc" {
 # Create the Application Load Balancer
 ################################################################################
 module "application_load_balancer" {
-  source          = "./modules/app_load_balancer"
-  vpc_id          = module.vpc.vpc_id
-  project_id      = var.project_name
-  tags            = local.tags
-  public_subnets  = module.vpc.public_subnets
-  no_azs          = var.no_azs
+  source              = "./modules/app_load_balancer"
+  vpc_id              = aws_vpc.main_vpc.id
+  project_name        = var.project_name
+  tags                = local.tags
+  public_subnet       = aws_subnet.public_subnet[*].id
+  origin_secret_value = var.origin_secret_value
 }
 
 ################################################################################
 # Create the CloudFront with WAF
 ################################################################################
 module "cloudfront" {
-  source        = "./modules/cloudfront"
-  project_id    = var.project_name
-  tags          = local.tags
-  alb_dns_name  = module.application_load_balancer.alb_dns_name
+  source              = "./modules/cloudfront"
+  project_name        = var.project_name
+  tags                = local.tags
+  alb_dns_name        = module.application_load_balancer.alb_dns_name
+  origin_secret_value = var.origin_secret_value
 }
 
 ################################################################################
@@ -124,10 +162,10 @@ module "cloudfront" {
 ################################################################################
 module "bastion_host" {
   source                = "./modules/bastion_host"
-  vpc_id                = module.vpc.vpc_id
-  project_id            = var.project_name
+  vpc_id                = aws_vpc.main_vpc.id
+  project_name          = var.project_name
   aws_ami               = data.aws_ami.generic_server.id
-  public_subnet_id      = element(module.vpc.public_subnets, 0)
+  public_subnet_id      = aws_subnet.public_subnet[0].id
   tags                  = local.tags
   instance_type         = var.instance_type
   allowed_access_cidrs  = var.allowed_access_cidrs
@@ -137,15 +175,15 @@ module "bastion_host" {
 # Nat Instance
 ################################################################################
 module "nat_instance" {
-  source            = "./modules/nat_instance"
-  vpc_id            = module.vpc.vpc_id
-  project_id        = var.project_name
-  aws_ami           = data.aws_ami.generic_server.id
-  public_subnet_id  = element(module.vpc.public_subnets, 0)
-  instance_type     = var.instance_type
-  private_subnets   = module.vpc.private_subnets
-  private_cidr      = element(module.vpc.private_subnets_cidr_blocks, 0)
-  tags              = local.tags
+  source                = "./modules/nat_instance"
+  vpc_id                = aws_vpc.main_vpc.id
+  project_name          = var.project_name
+  aws_ami               = data.aws_ami.generic_server.id
+  public_subnet_id      = aws_subnet.public_subnet[0].id
+  instance_type         = var.instance_type
+  private_subnets_ids   = aws_subnet.private_subnets[*].id
+  private_cidr          = aws_subnet.private_subnets[*].cidr_block
+  tags                  = local.tags
 }
 
 ################################################################################
@@ -153,10 +191,10 @@ module "nat_instance" {
 ################################################################################
 module "jenkins_server" {
   source            = "./modules/jenkins_server"
-  project_id        = var.project_name
-  vpc_id            = module.vpc.vpc_id
+  project_name      = var.project_name
+  vpc_id            = aws_vpc.main_vpc.id
   aws_ami           = data.aws_ami.generic_server.id
-  private_subnet_id = element(module.vpc.private_subnets, 0)
+  private_subnet_id = aws_subnet.private_subnets[0].id
   instance_type     = var.instance_type
   bastion_sg_id     = module.bastion_host.bastion_sg_id
   tags              = local.tags

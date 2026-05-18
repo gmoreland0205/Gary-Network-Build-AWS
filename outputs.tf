@@ -3,14 +3,10 @@ output "Region" {
   value = var.region
 }
 
-output "Availabillity_Zones" {
-  value = module.vpc.azs
-}
-
 output "Public_Subnets" {
-  value = module.vpc.public_subnets
+  value = aws_subnet.public_subnet
 }
 
 output "Private_Subnets" {
-  value = module.vpc.private_subnets
+  value = aws_subnet.private_subnets
 }

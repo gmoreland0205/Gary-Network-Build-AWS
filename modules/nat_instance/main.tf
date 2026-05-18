@@ -3,7 +3,7 @@
 # -----------------
 resource "aws_security_group" "nat" {
   vpc_id      = var.vpc_id
-  name        = "nat_security_group_${var.project_id}"
+  name        = "nat_security_group_${var.project_name}"
   description = "Security group for NAT instance"
 
 # Allow traffic FROM private subnet only
@@ -11,7 +11,7 @@ resource "aws_security_group" "nat" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.private_cidr]
+    cidr_blocks = var.private_cidr
   }
 
 # Allow all outbound traffic
@@ -22,7 +22,9 @@ resource "aws_security_group" "nat" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "nat-sg-${var.project_name}"
+  })
 }
 
 # -----------------
@@ -37,9 +39,9 @@ resource "aws_instance" "nat" {
   associate_public_ip_address = true
   source_dest_check           = false
 
-  tags = {
-    Name = "nat-instance"
-  }
+  tags = merge(var.tags, {
+    Name = "nat-instance-${var.project_name}"
+  })
 }
 
 # -----------------
@@ -47,6 +49,10 @@ resource "aws_instance" "nat" {
 # -----------------
 resource "aws_eip" "nat" {
   domain = "vpc"
+
+  tags = merge(var.tags, {
+    Name = "nat-eip-${var.project_name}"
+  })
 }
 
 resource "aws_eip_association" "nat" {
@@ -61,7 +67,7 @@ resource "aws_route_table" "private_rt" {
   vpc_id = var.vpc_id
 
   tags = merge(var.tags, {
-    Name = "private_routetable_${var.project_id}"
+    Name = "private-routetable-${var.project_name}"
   })
 }
 
@@ -73,7 +79,7 @@ resource "aws_route" "private_nat" {
 
 resource "aws_route_table_association" "private_assoc" {
   for_each = {
-    for idx, subnet in var.private_subnets :
+    for idx, subnet in var.private_subnets_ids :
     idx => subnet
   }
 

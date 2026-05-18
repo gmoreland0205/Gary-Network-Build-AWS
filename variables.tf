@@ -1,6 +1,6 @@
 variable "project_name" {
     type        = string
-    default     = "Gary-Infra"
+    default     = "gary-infra"
     description = "The ID of the machine image (AMI) to use."
 }
 
@@ -45,4 +45,9 @@ variable"ssh-key-pair" {
 variable "allowed_access_cidrs" {
     type        = string
     description = "The public CIDR Block that is allowed to access the Bastion Host"
+}
+
+variable "origin_secret_value" {
+    type      = string
+    sensitive = true
 }

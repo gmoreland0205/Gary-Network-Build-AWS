@@ -6,7 +6,7 @@ module "network_firewall" {
   source = "terraform-aws-modules/network-firewall/aws"
 
   # Firewall
-  name        = "firewall_${var.project_id}"
+  name        = "firewall_${var.project_name}"
   description = "Gary portfolio site firewall"
 
   # Settings
@@ -28,7 +28,7 @@ module "network_firewall" {
     {
       log_destination = {
         bucketName = aws_s3_bucket.network_firewall_logs.id
-        prefix     = var.project_id
+        prefix     = var.project_name
       }
       log_destination_type = "S3"
       log_type             = "FLOW"
@@ -36,7 +36,7 @@ module "network_firewall" {
   ]
 
   # Policy
-  policy_name        = "firewall_policy_${var.project_id}"
+  policy_name        = "firewall_policy_${var.project_name}"
   policy_description = "Gary portfolio site firewall policy"
 
   policy_stateful_rule_group_reference = {
@@ -54,7 +54,7 @@ module "network_firewall" {
 module "network_firewall_rule_group_stateful" {
   source = "terraform-aws-modules/network-firewall/aws//modules/rule-group"
 
-  name        = "firewall_rule_group_${var.project_id}-stateful"
+  name        = "firewall_rule_group_${var.project_name}-stateful"
   description = "Stateful Inspection for denying access to a domain"
   type        = "STATEFUL"
   capacity    = 100
@@ -129,11 +129,11 @@ module "network_firewall_rule_group_stateful" {
 # Supporting Resources
 ################################################################################
 resource "aws_s3_bucket" "network_firewall_logs" {
-  bucket        = "${var.project_id}-network-firewall-logs-${var.account_id}"
+  bucket        = "${var.project_name}-network-firewall-logs-${var.account_id}"
   force_destroy = true
 
   tags = {
-    Project_ID = var.project_id
+    Project_Name = var.project_name
   }
 }
 
@@ -158,7 +158,7 @@ resource "aws_s3_bucket_policy" "network_firewall_logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Resource = "${aws_s3_bucket.network_firewall_logs.arn}/${var.project_id}/AWSLogs/${var.account_id}/*"
+        Resource = "${aws_s3_bucket.network_firewall_logs.arn}/${var.project_name}/AWSLogs/${var.account_id}/*"
         Sid      = "AWSLogDeliveryWrite"
       },
       {

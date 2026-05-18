@@ -3,9 +3,9 @@ variable "vpc_id" {
     description = "The VPC that the NAT instance is being installed"
 }
 
-variable "project_id" {
+variable "project_name" {
     type        = string
-    description = "The ID of the project being used."
+    description = "The name of the project being used."
 }
 
 variable "public_subnet_id" {
@@ -24,11 +24,11 @@ variable "aws_ami" {
 }
 
 variable "private_cidr" {
-    type        = string
+    type        = list(string)
     description = "CIDR block for the private vpn"
 }
 
-variable "private_subnets" {
+variable "private_subnets_ids" {
     type        = list(string)
     description = "Subnet IDs for the private vpn"
 }
