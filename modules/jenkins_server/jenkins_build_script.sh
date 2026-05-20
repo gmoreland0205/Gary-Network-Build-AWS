@@ -1,31 +1,51 @@
 #!/bin/bash
-# Update system packages
-yum update -y
+set -eux
 
-# Install dependencies
-yum install -y yum-utils unzip wget git
+# Log everything to user-data log
+exec > /var/log/user-data.log 2>&1
 
-# Install Java (required for Jenkins)
-amazon-linux-extras install java-openjdk11 -y
+echo "Setup started at $(date)"
 
 # -------------------------
-# Install Jenkins
+# System update + tools
 # -------------------------
+dnf update -y
+
+# -------------------------
+# Java (required for Jenkins)
+# -------------------------
+echo "Installing Java 21 at $(date)"
+dnf install -y java-21-amazon-corretto
+
+java -version
+
+# -------------------------
+# Jenkins installation
+# -------------------------
+echo "Installing Jenkins at $(date)"
+
 wget -O /etc/yum.repos.d/jenkins.repo \
- https://pkg.jenkins.io/redhat-stable/jenkins.repo
+  https://pkg.jenkins.io/redhat-stable/jenkins.repo
 
-rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
-yum install jenkins -y
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+
+dnf install -y jenkins
 
 systemctl enable jenkins
 systemctl start jenkins
 
 # -------------------------
-# Install Terraform
+# Terraform installation
 # -------------------------
-yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+echo "Installing Terraform at $(date)"
 
-yum install -y terraform
+dnf install -y dnf-plugins-core
 
-# Verify install
+dnf config-manager --add-repo \
+  https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+dnf install -y terraform
+
 terraform -version
+
+echo "Setup completed at $(date)"
