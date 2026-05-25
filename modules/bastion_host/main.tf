@@ -5,6 +5,7 @@
 # Bastion host security group
 resource "aws_security_group" "bastion_sg" {
   vpc_id = var.vpc_id
+  name   = "bastion_security_group_${var.project_name}"
 
   ingress {
     description = "Allow SSH from my IP"

@@ -8,7 +8,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 
 # Create Security Groups for the load balancer
 resource "aws_security_group" "alb_http_sg" {
-  name   = "alb-http-sg-${var.project_name}"
+  name   = "alb-http-security-group-${var.project_name}"
   vpc_id = var.vpc_id
 
   ingress {
@@ -26,11 +26,13 @@ resource "aws_security_group" "alb_http_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "alb-http-sg-${var.project_name}"
+  })
 }
 
 resource "aws_security_group" "alb_https_sg" {
-  name   = "alb-https-sg-${var.project_name}"
+  name   = "alb-https-security-group-${var.project_name}"
   vpc_id = var.vpc_id
 
   ingress {
@@ -47,7 +49,9 @@ resource "aws_security_group" "alb_https_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Name = "alb-https-sg-${var.project_name}"
+  })
 }
 
 # Create Target Group for the load balancer

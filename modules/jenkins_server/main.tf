@@ -5,6 +5,7 @@
 # Jenkins SG
 resource "aws_security_group" "jenkins_sg" {
   vpc_id = var.vpc_id
+  name   = "jenkins_security_group_${var.project_name}"
 
   # Allow SSH only from Bastion
   ingress {
